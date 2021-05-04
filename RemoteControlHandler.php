@@ -88,4 +88,51 @@ class RemoteControlHandler extends remotecontrol_handle
             'permission'=>\Permission::model()->hasSurveyPermission($iSurveyID, $sPermission, $sCRUD),
         );
     }
+       /**
+     * Get survey properties (RPC function)
+     *
+     * Get properties of a survey
+     * All internal properties of a survey are available.
+     * @see \Survey for the list of available properties
+     *
+     * Failure status : Invalid survey ID, Invalid session key, No permission, No valid Data
+     *
+     * @access public
+     * @param string $sSessionKey Auth credentials
+     * @param int $iSurveyID The id of the Survey to be checked
+     * @param array|null $aSurveySettings (optional) The properties to get
+     * @return array
+     */
+    public function get_survey_properties_extended($sSessionKey, $iSurveyID, $aSurveySettings = null)
+    {
+        Yii::app()->loadHelper("surveytranslator");
+        if ($this->_checkSessionKey($sSessionKey)) {
+            $iSurveyID = (int) $iSurveyID;
+            $oSurvey = Survey::model()->findByPk($iSurveyID);
+            if (!isset($oSurvey)) {
+                return array('status' => 'Error: Invalid survey ID');
+            }
+            if (Permission::model()->hasSurveyPermission($iSurveyID, 'surveysettings', 'read')) {
+                $aBasicDestinationFields = Survey::model()->tableSchema->columnNames;
+                $aBasicDestinationFields[] = 'quotas';
+                if (!empty($aSurveySettings)) {
+                    $aSurveySettings = array_intersect($aSurveySettings, $aBasicDestinationFields);
+                } else {
+                    $aSurveySettings = $aBasicDestinationFields;
+                }
+                if (empty($aSurveySettings)) {
+                    return array('status' => 'No valid Data');
+                }
+                $aResult = array();
+                foreach ($aSurveySettings as $sPropertyName) {
+                    $aResult[$sPropertyName] = $oSurvey->$sPropertyName;
+                }
+                return $aResult;
+            } else {
+                            return array('status' => 'No permission');
+            }
+        } else {
+                    return array('status' => 'Invalid Session key');
+        }
+    }
 }
