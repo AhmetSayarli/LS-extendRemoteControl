@@ -100,10 +100,9 @@ class RemoteControlHandler extends remotecontrol_handle
      * @access public
      * @param string $sSessionKey Auth credentials
      * @param int $iSurveyID The id of the Survey to be checked
-     * @param array|null $aSurveySettings (optional) The properties to get
      * @return array
      */
-    public function get_survey_properties_extended($sSessionKey, $iSurveyID, $aSurveySettings = null)
+    public function get_survey_quotas($sSessionKey, $iSurveyID)
     {
         Yii::app()->loadHelper("surveytranslator");
         if ($this->_checkSessionKey($sSessionKey)) {
@@ -113,19 +112,15 @@ class RemoteControlHandler extends remotecontrol_handle
                 return array('status' => 'Error: Invalid survey ID');
             }
             if (Permission::model()->hasSurveyPermission($iSurveyID, 'surveysettings', 'read')) {
-                $aBasicDestinationFields = Survey::model()->tableSchema->columnNames;
-                $aBasicDestinationFields[] = 'quotas';
-                if (!empty($aSurveySettings)) {
-                    $aSurveySettings = array_intersect($aSurveySettings, $aBasicDestinationFields);
-                } else {
-                    $aSurveySettings = $aBasicDestinationFields;
-                }
-                if (empty($aSurveySettings)) {
-                    return array('status' => 'No valid Data');
-                }
+                $quotas = $oSurvey->quotas;
                 $aResult = array();
-                foreach ($aSurveySettings as $sPropertyName) {
-                    $aResult[$sPropertyName] = $oSurvey->$sPropertyName;
+                foreach ($quotas as $quota) {
+                    // var_dump($quota); 
+                    $completedCount = $quota->getCompleteCount();
+                    $quotaRes = $quota->getAttributes();
+                    $quotaRes['completed'] = $completedCount;
+                    // var_dump($completedCount);
+                    $aResult[] = $quotaRes;
                 }
                 return $aResult;
             } else {
